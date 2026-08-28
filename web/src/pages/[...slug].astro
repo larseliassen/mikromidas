@@ -1,5 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
+import Kolofon from '../components/Kolofon.astro';
 
 export async function getStaticPaths() {
   const kapitler = await getCollection('kapitler');
@@ -12,13 +13,20 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { Content } = await entry.render();
 const base = import.meta.env.BASE_URL;
+
+// The Pi only produces a real title when the translated chapter kept its
+// heading; otherwise it falls back to the plain "Kapittel N", and rendering
+// "Kapittel 7: Kapittel 7" is worse than rendering nothing.
+const nummer = `Kapittel ${entry.data.chapter}`;
+const undertittel = entry.data.title.trim() === nummer ? null : entry.data.title;
+const overskrift = undertittel ? `${nummer}: ${undertittel}` : nummer;
 ---
 
 <html lang="nb">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Kapittel {entry.data.chapter}: {entry.data.title}</title>
+    <title>{overskrift}</title>
     <style>
       body { font-family: Georgia, 'Times New Roman', serif; max-width: 40rem;
              margin: 3rem auto; padding: 0 1.25rem; line-height: 1.75; font-size: 1.1rem; }
@@ -29,7 +37,8 @@ const base = import.meta.env.BASE_URL;
   </head>
   <body>
     <a class="back" href={base + '/'}>← Alle kapitler</a>
-    <h1>Kapittel {entry.data.chapter}: {entry.data.title}</h1>
+    <h1>{overskrift}</h1>
     <article><Content /></article>
+    <Kolofon entry={entry} />
   </body>
 </html>

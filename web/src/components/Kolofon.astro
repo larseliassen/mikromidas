@@ -1,0 +1,113 @@
+---
+// The colophon: what it cost the Pi to write this chapter. Half the point of
+// the experiment is that the numbers are bad, so they are published rather than
+// hidden — a 3.8 tokens/second novel is the story.
+//
+// Chapters 1-4 carry no `generation` block at all, so every field here has to
+// be treated as possibly missing.
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  entry: CollectionEntry<'kapitler'>;
+}
+
+const { entry } = Astro.props;
+const g = entry.data.generation;
+
+/** 572.3 -> "9 min 32 s"; 41 -> "41 s". */
+function duration(s: number | undefined): string | null {
+  if (typeof s !== 'number' || !isFinite(s)) return null;
+  const total = Math.round(s);
+  if (total < 60) return `${total} s`;
+  return `${Math.floor(total / 60)} min ${String(total % 60).padStart(2, '0')} s`;
+}
+
+/** Drop the registry path so "hf.co/NbAiLab/borealis-...-gguf:Q4_K_M" fits. */
+function shortModel(m: string | undefined): string | null {
+  return m ? m.split('/').pop()! : null;
+}
+
+const speed = (p: { tokens_per_second?: number } | undefined) =>
+  typeof p?.tokens_per_second === 'number' ? `${p.tokens_per_second} tokens/s` : null;
+
+// [label, value] pairs; anything that resolved to null is dropped, so a chapter
+// missing half its counters renders a shorter list instead of a row of dashes.
+const rows: [string, string][] = (
+  [
+    ['Skrevet på', entry.data.model ? `${shortModel(entry.data.model)} (${g?.host ?? 'Raspberry Pi 5'})` : null],
+    ['Utkast', [duration(g?.write?.seconds), speed(g?.write)].filter(Boolean).join(' · ') || null],
+    [
+      'Oversettelse',
+      g?.translate
+        ? [
+            shortModel(g.translate_model),
+            duration(g.translate.seconds),
+            speed(g.translate),
+          ]
+            .filter(Boolean)
+            .join(' · ') || null
+        : null,
+    ],
+    ['Totalt', duration(g?.seconds)],
+    ['Regianvisning', g?.beat ?? null],
+  ] as [string, string | null][]
+).filter((r): r is [string, string] => Boolean(r[1]));
+---
+
+{
+  rows.length > 0 && (
+    <details class="kolofon">
+      <summary>Hvordan kapittelet ble til</summary>
+      <dl>
+        {rows.map(([label, value]) => (
+          <>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </>
+        ))}
+      </dl>
+    </details>
+  )
+}
+
+<style>
+  .kolofon {
+    margin: 3.5rem 0 1rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #ddd;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: #888;
+  }
+  .kolofon summary {
+    cursor: pointer;
+    /* The chapter body is a serif column; this is machinery, not prose. */
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 0.9rem;
+  }
+  .kolofon dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.35rem 1.25rem;
+    margin: 1rem 0 0;
+  }
+  .kolofon dt {
+    color: #aaa;
+  }
+  .kolofon dd {
+    margin: 0;
+    /* Model names and beats are long; let them wrap rather than scroll. */
+    overflow-wrap: anywhere;
+  }
+  @media (max-width: 30rem) {
+    .kolofon dl {
+      grid-template-columns: 1fr;
+      gap: 0 0;
+    }
+    .kolofon dd {
+      margin-bottom: 0.6rem;
+    }
+  }
+</style>

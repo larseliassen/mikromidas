@@ -32,7 +32,11 @@ const base = import.meta.env.BASE_URL;
       {kapitler.map((k) => (
         <li>
           <a href={`${base}/${k.slug}/`}>
-            Kapittel {k.data.chapter}: {k.data.title}
+            {/* No "Kapittel 7: Kapittel 7" when the translation lost its
+                heading and the title fell back to the chapter number. */}
+            {k.data.title.trim() === `Kapittel ${k.data.chapter}`
+              ? k.data.title
+              : `Kapittel ${k.data.chapter}: ${k.data.title}`}
           </a>
           <time datetime={k.data.date}>{k.data.date}</time>
         </li>
